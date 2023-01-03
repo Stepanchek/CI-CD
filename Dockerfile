@@ -1,9 +1,18 @@
-FROM eclipse-temurin:18-jdk-jammy
+FROM maven:3.6.3-jdk-8 AS build-env
+WORKDIR /app
 
-WORKDIR /ci-cd/
+COPY pom.xml ./
+RUN mvn dependency:go-offline
+RUN mvn spring-javaformat:help
 
-COPY . /ci-cd
+COPY . ./
+RUN mvn spring-javaformat:apply
+RUN mvn package -DfinalName=CI-CD
 
-CMD ["java", "-cp", "./target/ci-cd-test-1.0-SNAPSHOT.jar","org.example.Main"]
+FROM openjdk:8-jre-alpine
+EXPOSE 8080
+WORKDIR /app
 
+COPY --from=build-env /target/ci-cd-test-1.0-SNAPSHOT.jar ./ci-cd-test-1.0-SNAPSHOT.jar
+CMD ["/usr/bin/java", "-jar", "/app/ci-cd-test-1.0-SNAPSHOT.jar"]
 
